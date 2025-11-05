@@ -1005,6 +1005,8 @@
         
         // Set today's date as default
         document.addEventListener('DOMContentLoaded', function() {
+                // Test API connection
+    testAPIConnection();
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('fitness-date').value = today;
             document.getElementById('38a-date').value = today;
@@ -1489,4 +1491,5 @@
     </script>
 </body>
 </html>
+
 
