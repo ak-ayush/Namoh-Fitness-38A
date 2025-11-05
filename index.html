@@ -989,7 +989,7 @@
     <!-- Notification -->
     <div class="notification" id="notification"></div>
 
-    <script>
+<script>
         // Configuration - UPDATE THIS WITH YOUR GOOGLE APPS SCRIPT URL
         const API_URL = 'https://script.google.com/macros/s/AKfycbzfl7cLxLipfhI1R-FkmyIvsmMKEJ6BhsGSv3EFYumSsXdwUBPcsmTX9SIpJHOYouxXQw/exec';
         
@@ -1005,12 +1005,11 @@
         
         // Set today's date as default
         document.addEventListener('DOMContentLoaded', function() {
-                // Test API connection
-    testAPIConnection();
             const today = new Date().toISOString().split('T')[0];
             document.getElementById('fitness-date').value = today;
             document.getElementById('38a-date').value = today;
             
+            // Load categories when app starts
             loadFitnessCategories();
             load38ACategories();
             
@@ -1032,7 +1031,27 @@
                     save38AEntries();
                 }
             });
+            
+            // Test API connection
+            testAPIConnection();
         });
+
+        // Test API connection
+        function testAPIConnection() {
+            console.log('Testing API connection to:', API_URL);
+            fetch(`${API_URL}?action=getFitnessEntries&status=Pending`)
+                .then(response => {
+                    console.log('API test response status:', response.status);
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('API test successful:', data);
+                })
+                .catch(error => {
+                    console.error('API test failed:', error);
+                    showNotification('Cannot connect to server. Check API URL and internet.', 'error');
+                });
+        }
         
         // Navigation functions
         function showMainMenu() {
@@ -1141,18 +1160,25 @@
                 clearVehicleInputs('fitness');
                 const firstInput = document.querySelector('#fitness-vehicles-container .vehicle-input');
                 firstInput.value = entry.VehicleNumber;
-                
-                // Set dropdown values
-                setTimeout(() => {
-                    document.getElementById('fitness-approval-from').value = entry.ApprovalFrom;
-                    document.getElementById('fitness-client').value = entry.Client;
-                }, 100);
             } else {
                 document.getElementById('fitness-modal-title').textContent = 'Add Fitness Entry';
                 document.getElementById('fitness-form').reset();
                 document.getElementById('fitness-date').value = new Date().toISOString().split('T')[0];
                 clearVehicleInputs('fitness');
             }
+            
+            // Reload categories when modal opens
+            setTimeout(() => {
+                loadFitnessCategories();
+                
+                // Set dropdown values for editing
+                if (isEditingFitness) {
+                    setTimeout(() => {
+                        document.getElementById('fitness-approval-from').value = entry.ApprovalFrom;
+                        document.getElementById('fitness-client').value = entry.Client;
+                    }, 500);
+                }
+            }, 100);
             
             document.getElementById('fitness-modal').style.display = 'flex';
         }
@@ -1162,7 +1188,125 @@
             isEditingFitness = false;
         }
         
-        // NEW: Save multiple fitness entries
+        function loadFitnessEntries(status) {
+            console.log(`Loading fitness entries with status: ${status}`);
+            currentFitnessStatus = status;
+            
+            showNotification('Loading fitness entries...', 'warning');
+            
+            fetch(`${API_URL}?action=getFitnessEntries&status=${status}`)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Fitness entries data:', data);
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    displayFitnessEntries(data.entries || [], status);
+                    showNotification(`Loaded ${data.entries?.length || 0} fitness entries`, 'success');
+                })
+                .catch(error => {
+                    console.error('Error loading fitness entries:', error);
+                    showNotification('Error loading fitness entries: ' + error.message, 'error');
+                    const container = document.getElementById('fitness-entries-container');
+                    container.innerHTML = `<div class="no-entries"><p>Error: ${error.message}</p></div>`;
+                });
+        }
+        
+        function displayFitnessEntries(entries, status) {
+            const container = document.getElementById('fitness-entries-container');
+            const title = status === 'Pending' ? 'Pending Fitness Entries' : 'Completed Fitness Entries';
+            
+            if (entries.length === 0) {
+                container.innerHTML = `
+                    <div class="entries-header">
+                        <h3 class="entries-title">${title}</h3>
+                    </div>
+                    <div class="no-entries">
+                        <i class="fas fa-dumbbell"></i>
+                        <p>No ${status.toLowerCase()} fitness entries found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let bulkActions = '';
+            if (status === 'Pending') {
+                bulkActions = `
+                    <div class="bulk-actions" id="fitness-bulk-actions">
+                        <span class="selected-count" id="fitness-selected-count">0 selected</span>
+                        <button class="bulk-btn approve" onclick="approveFitnessEntries()">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="bulk-btn edit" onclick="editSelectedFitnessEntry()">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="bulk-btn delete" onclick="deleteFitnessEntries()">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+            } else {
+                bulkActions = `
+                    <div class="bulk-actions" id="fitness-bulk-actions">
+                        <span class="selected-count" id="fitness-selected-count">0 selected</span>
+                        <button class="bulk-btn undo" onclick="undoFitnessEntries()">
+                            <i class="fas fa-undo"></i> Undo
+                        </button>
+                    </div>
+                `;
+            }
+            
+            let entriesHTML = entries.map(entry => {
+                const isIncomplete = !entry.ApprovalFrom || !entry.Client || !entry.Date;
+                const incompleteClass = isIncomplete ? 'incomplete' : '';
+                
+                return `
+                    <div class="entry-item ${incompleteClass}">
+                        <input type="checkbox" class="entry-checkbox" 
+                               onchange="toggleFitnessSelection('${entry.EntryID}', this)"
+                               ${selectedFitnessEntries.has(entry.EntryID) ? 'checked' : ''}>
+                        <div class="entry-content">
+                            <div class="entry-header">
+                                <div class="entry-vehicle">${entry.VehicleNumber}</div>
+                                <div class="entry-date">${formatDate(entry.Date)}</div>
+                            </div>
+                            <div class="entry-details">
+                                <div class="entry-detail">
+                                    <span class="detail-label">Approval From:</span>
+                                    <span class="detail-value">${entry.ApprovalFrom || 'Not set'}</span>
+                                </div>
+                                <div class="entry-detail">
+                                    <span class="detail-label">Client:</span>
+                                    <span class="detail-value">${entry.Client || 'Not set'}</span>
+                                </div>
+                            </div>
+                            ${entry.Remarks ? `<div class="entry-remarks">${entry.Remarks}</div>` : ''}
+                            ${isIncomplete ? `<div class="entry-remarks" style="color: var(--accent-red); font-weight: bold;">INCOMPLETE ENTRY - Please edit to complete</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = `
+                <div class="entries-header">
+                    <h3 class="entries-title">${title} (${entries.length})</h3>
+                    ${bulkActions}
+                </div>
+                <div class="entries-list">
+                    ${entriesHTML}
+                </div>
+            `;
+            
+            updateFitnessBulkActions();
+        }
+        
+        // Save multiple fitness entries
         function saveFitnessEntries() {
             const date = document.getElementById('fitness-date').value;
             const approvalFrom = document.getElementById('fitness-approval-from').value;
@@ -1206,9 +1350,9 @@
                         completed++;
                     } else {
                         errors++;
-                    console.error('Error saving vehicle:', vehicle, data.error);
-                    showNotification(`Error saving vehicle ${vehicle}: ${data.error}`, 'error');
-                    return;
+                        console.error('Error saving vehicle:', vehicle, data.error);
+                        showNotification(`Error saving vehicle ${vehicle}: ${data.error}`, 'error');
+                        return;
                     }
                     
                     if (completed + errors === vehicles.length) {
@@ -1294,7 +1438,7 @@
             });
         }
         
-        // 38-A Functions (similar pattern)
+        // 38-A Functions
         function open38AModal(entry = null) {
             isEditing38A = entry !== null;
             
@@ -1307,11 +1451,6 @@
                 clearVehicleInputs('38a');
                 const firstInput = document.querySelector('#38a-vehicles-container .vehicle-input');
                 firstInput.value = entry.VehicleNumber;
-                
-                setTimeout(() => {
-                    document.getElementById('38a-approval-from').value = entry.ApprovalFrom;
-                    document.getElementById('38a-client').value = entry.Client;
-                }, 100);
             } else {
                 document.getElementById('38a-modal-title').textContent = 'Add 38-A Entry';
                 document.getElementById('38a-form').reset();
@@ -1319,12 +1458,139 @@
                 clearVehicleInputs('38a');
             }
             
+            // Reload categories when modal opens
+            setTimeout(() => {
+                load38ACategories();
+                
+                // Set dropdown values for editing
+                if (isEditing38A) {
+                    setTimeout(() => {
+                        document.getElementById('38a-approval-from').value = entry.ApprovalFrom;
+                        document.getElementById('38a-client').value = entry.Client;
+                    }, 500);
+                }
+            }, 100);
+            
             document.getElementById('38a-modal').style.display = 'flex';
         }
         
         function close38AModal() {
             document.getElementById('38a-modal').style.display = 'none';
             isEditing38A = false;
+        }
+        
+        function load38AEntries(status) {
+            console.log(`Loading 38-A entries with status: ${status}`);
+            current38AStatus = status;
+            
+            showNotification('Loading 38-A entries...', 'warning');
+            
+            fetch(`${API_URL}?action=get38AEntries&status=${status}`)
+                .then(response => {
+                    console.log('Response status:', response.status);
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('38-A entries data:', data);
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    display38AEntries(data.entries || [], status);
+                    showNotification(`Loaded ${data.entries?.length || 0} 38-A entries`, 'success');
+                })
+                .catch(error => {
+                    console.error('Error loading 38-A entries:', error);
+                    showNotification('Error loading 38-A entries: ' + error.message, 'error');
+                    const container = document.getElementById('38a-entries-container');
+                    container.innerHTML = `<div class="no-entries"><p>Error: ${error.message}</p></div>`;
+                });
+        }
+        
+        function display38AEntries(entries, status) {
+            const container = document.getElementById('38a-entries-container');
+            const title = status === 'Pending' ? 'Pending 38-A Entries' : 'Completed 38-A Entries';
+            
+            if (entries.length === 0) {
+                container.innerHTML = `
+                    <div class="entries-header">
+                        <h3 class="entries-title">${title}</h3>
+                    </div>
+                    <div class="no-entries">
+                        <i class="fas fa-file-contract"></i>
+                        <p>No ${status.toLowerCase()} 38-A entries found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let bulkActions = '';
+            if (status === 'Pending') {
+                bulkActions = `
+                    <div class="bulk-actions" id="38a-bulk-actions">
+                        <span class="selected-count" id="38a-selected-count">0 selected</span>
+                        <button class="bulk-btn approve" onclick="approve38AEntries()">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="bulk-btn edit" onclick="editSelected38AEntry()">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="bulk-btn delete" onclick="delete38AEntries()">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+            } else {
+                bulkActions = `
+                    <div class="bulk-actions" id="38a-bulk-actions">
+                        <span class="selected-count" id="38a-selected-count">0 selected</span>
+                        <button class="bulk-btn undo" onclick="undo38AEntries()">
+                            <i class="fas fa-undo"></i> Undo
+                        </button>
+                    </div>
+                `;
+            }
+            
+            let entriesHTML = entries.map(entry => {
+                return `
+                    <div class="entry-item">
+                        <input type="checkbox" class="entry-checkbox" 
+                               onchange="toggle38ASelection('${entry.EntryID}', this)"
+                               ${selected38AEntries.has(entry.EntryID) ? 'checked' : ''}>
+                        <div class="entry-content">
+                            <div class="entry-header">
+                                <div class="entry-vehicle">${entry.VehicleNumber}</div>
+                                <div class="entry-date">${formatDate(entry.Date)}</div>
+                            </div>
+                            <div class="entry-details">
+                                <div class="entry-detail">
+                                    <span class="detail-label">Approval From:</span>
+                                    <span class="detail-value">${entry.ApprovalFrom}</span>
+                                </div>
+                                <div class="entry-detail">
+                                    <span class="detail-label">Client:</span>
+                                    <span class="detail-value">${entry.Client}</span>
+                                </div>
+                            </div>
+                            ${entry.Remarks ? `<div class="entry-remarks">${entry.Remarks}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = `
+                <div class="entries-header">
+                    <h3 class="entries-title">${title} (${entries.length})</h3>
+                    ${bulkActions}
+                </div>
+                <div class="entries-list">
+                    ${entriesHTML}
+                </div>
+            `;
+            
+            update38ABulkActions();
         }
         
         function save38AEntries() {
@@ -1454,8 +1720,212 @@
             });
         }
         
-        // [Include all the other existing functions like loadFitnessEntries, load38AEntries, 
-        // loadPendingFFEntries, category management, etc. from your initial working code]
+        // Pending FF Functions
+        function loadPendingFFEntries() {
+            showNotification('Loading Pending FF entries...', 'warning');
+            
+            fetch(`${API_URL}?action=getPendingFFEntries`)
+                .then(response => {
+                    if (!response.ok) {
+                        throw new Error(`HTTP error! status: ${response.status}`);
+                    }
+                    return response.json();
+                })
+                .then(data => {
+                    if (data.error) {
+                        throw new Error(data.error);
+                    }
+                    displayPendingFFEntries(data.entries || []);
+                    showNotification(`Loaded ${data.entries?.length || 0} Pending FF entries`, 'success');
+                })
+                .catch(error => {
+                    console.error('Error loading Pending FF entries:', error);
+                    showNotification('Error loading Pending FF entries: ' + error.message, 'error');
+                    document.getElementById('38a-entries-container').innerHTML = 
+                        `<div class="no-entries"><p>Error loading entries: ${error.message}</p></div>`;
+                });
+        }
+        
+        function displayPendingFFEntries(entries) {
+            const container = document.getElementById('38a-entries-container');
+            const title = 'Pending FF Entries';
+            
+            if (entries.length === 0) {
+                container.innerHTML = `
+                    <div class="entries-header">
+                        <h3 class="entries-title">${title}</h3>
+                    </div>
+                    <div class="no-entries">
+                        <i class="fas fa-forward"></i>
+                        <p>No pending FF entries found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const bulkActions = `
+                <div class="bulk-actions" id="pending-ff-bulk-actions">
+                    <span class="selected-count" id="pending-ff-selected-count">0 selected</span>
+                    <button class="bulk-btn ff" onclick="approvePendingFFEntries()">
+                        <i class="fas fa-check"></i> Approve to Fitness
+                    </button>
+                </div>
+            `;
+            
+            let entriesHTML = entries.map(entry => {
+                return `
+                    <div class="entry-item">
+                        <input type="checkbox" class="entry-checkbox" 
+                               onchange="togglePendingFFSelection('${entry.EntryID}', this)"
+                               ${selectedPendingFFEntries.has(entry.EntryID) ? 'checked' : ''}>
+                        <div class="entry-content">
+                            <div class="entry-header">
+                                <div class="entry-vehicle">${entry.VehicleNumber}</div>
+                                <div class="entry-date">${formatDate(entry.CreatedAt)}</div>
+                            </div>
+                            <div class="entry-details">
+                                <div class="entry-detail">
+                                    <span class="detail-label">Status:</span>
+                                    <span class="detail-value">${entry.Status}</span>
+                                </div>
+                            </div>
+                            <div class="entry-remarks" style="color: var(--accent-yellow);">
+                                Ready to be sent to Fitness section
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = `
+                <div class="entries-header">
+                    <h3 class="entries-title">${title} (${entries.length})</h3>
+                    ${bulkActions}
+                </div>
+                <div class="entries-list">
+                    ${entriesHTML}
+                </div>
+            `;
+            
+            updatePendingFFBulkActions();
+        }
+        
+        // Category Management
+        function loadFitnessCategories() {
+            console.log('Loading fitness categories...');
+            
+            // Load Fitness Approval From
+            fetch(`${API_URL}?action=getCategories&sheetName=FitnessApprovalFrom`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network error');
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Fitness Approval Categories:', data);
+                    if (data.error) throw new Error(data.error);
+                    
+                    const select = document.getElementById('fitness-approval-from');
+                    select.innerHTML = '<option value="">Select Approval From</option>';
+                    
+                    if (data.categories && data.categories.length > 0) {
+                        data.categories.forEach(cat => {
+                            const option = document.createElement('option');
+                            option.value = cat.CategoryName;
+                            option.textContent = cat.CategoryName;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading fitness approval categories:', error);
+                    showNotification('Error loading approval categories', 'error');
+                });
+
+            // Load Fitness Client
+            fetch(`${API_URL}?action=getCategories&sheetName=FitnessClient`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network error');
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('Fitness Client Categories:', data);
+                    if (data.error) throw new Error(data.error);
+                    
+                    const select = document.getElementById('fitness-client');
+                    select.innerHTML = '<option value="">Select Client</option>';
+                    
+                    if (data.categories && data.categories.length > 0) {
+                        data.categories.forEach(cat => {
+                            const option = document.createElement('option');
+                            option.value = cat.CategoryName;
+                            option.textContent = cat.CategoryName;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading fitness client categories:', error);
+                    showNotification('Error loading client categories', 'error');
+                });
+        }
+        
+        function load38ACategories() {
+            console.log('Loading 38-A categories...');
+            
+            // Load 38-A Approval From
+            fetch(`${API_URL}?action=getCategories&sheetName=38AApprovalFrom`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network error');
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('38-A Approval Categories:', data);
+                    if (data.error) throw new Error(data.error);
+                    
+                    const select = document.getElementById('38a-approval-from');
+                    select.innerHTML = '<option value="">Select Approval From</option>';
+                    
+                    if (data.categories && data.categories.length > 0) {
+                        data.categories.forEach(cat => {
+                            const option = document.createElement('option');
+                            option.value = cat.CategoryName;
+                            option.textContent = cat.CategoryName;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading 38-A approval categories:', error);
+                    showNotification('Error loading approval categories', 'error');
+                });
+
+            // Load 38-A Client
+            fetch(`${API_URL}?action=getCategories&sheetName=38AClient`)
+                .then(response => {
+                    if (!response.ok) throw new Error('Network error');
+                    return response.json();
+                })
+                .then(data => {
+                    console.log('38-A Client Categories:', data);
+                    if (data.error) throw new Error(data.error);
+                    
+                    const select = document.getElementById('38a-client');
+                    select.innerHTML = '<option value="">Select Client</option>';
+                    
+                    if (data.categories && data.categories.length > 0) {
+                        data.categories.forEach(cat => {
+                            const option = document.createElement('option');
+                            option.value = cat.CategoryName;
+                            option.textContent = cat.CategoryName;
+                            select.appendChild(option);
+                        });
+                    }
+                })
+                .catch(error => {
+                    console.error('Error loading 38-A client categories:', error);
+                    showNotification('Error loading client categories', 'error');
+                });
+        }
         
         // Utility Functions
         function formatDate(dateString) {
@@ -1491,5 +1961,6 @@
     </script>
 </body>
 </html>
+
 
 
