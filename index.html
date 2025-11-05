@@ -1306,81 +1306,62 @@
             updateFitnessBulkActions();
         }
         
-        // Save multiple fitness entries
-        function saveFitnessEntries() {
-            const date = document.getElementById('fitness-date').value;
-            const approvalFrom = document.getElementById('fitness-approval-from').value;
-            const client = document.getElementById('fitness-client').value;
-            const remarks = document.getElementById('fitness-remarks').value;
-            const vehicles = getVehicleNumbers('fitness');
-            
-            if (!date || !approvalFrom || !client || vehicles.length === 0) {
-                showNotification('Please fill all required fields', 'error');
-                return;
-            }
-            
-            const saveBtn = document.getElementById('fitness-save-btn');
-            const saveText = document.getElementById('fitness-save-text');
-            const loading = document.getElementById('fitness-loading');
-            
-            saveText.style.display = 'none';
-            loading.style.display = 'inline-block';
-            saveBtn.disabled = true;
-            
-            let completed = 0;
-            let errors = 0;
-            
-            // Save each vehicle as a separate entry
+            // Save each vehicle as a separate entry with delays
             vehicles.forEach((vehicle, index) => {
-                const formData = new URLSearchParams();
-                formData.append('action', 'addFitnessEntry');
-                formData.append('date', date);
-                formData.append('approvalFrom', approvalFrom);
-                formData.append('client', client);
-                formData.append('vehicleNumber', vehicle);
-                formData.append('remarks', remarks);
-                
-                fetch(API_URL, {
-                    method: 'POST',
-                    body: formData
-                })
-                .then(response => response.json())
-                .then(data => {
-                    if (data.success) {
-                        completed++;
-                    } else {
-                        errors++;
-                        console.error('Error saving vehicle:', vehicle, data.error);
-                        showNotification(`Error saving vehicle ${vehicle}: ${data.error}`, 'error');
-                        return;
-                    }
+                // Add a small delay between requests to avoid API limits
+                setTimeout(() => {
+                    const formData = new URLSearchParams();
+                    formData.append('action', 'addFitnessEntry');
+                    formData.append('date', date);
+                    formData.append('approvalFrom', approvalFrom);
+                    formData.append('client', client);
+                    formData.append('vehicleNumber', vehicle);
+                    formData.append('remarks', remarks);
                     
-                    if (completed + errors === vehicles.length) {
-                        if (errors === 0) {
-                            showNotification(`${completed} fitness entries added successfully!`, 'success');
-                            closeFitnessModal();
-                            loadFitnessEntries('Pending');
+                    console.log(`Saving vehicle ${index + 1}: ${vehicle}`);
+                    
+                    fetch(API_URL, {
+                        method: 'POST',
+                        body: formData
+                    })
+                    .then(response => response.json())
+                    .then(data => {
+                        if (data.success) {
+                            completed++;
+                            console.log(`Successfully saved vehicle ${vehicle}`);
                         } else {
-                            showNotification(`${completed} entries saved, ${errors} errors`, 'warning');
+                            errors++;
+                            console.error('Error saving vehicle:', vehicle, data.error);
+                            showNotification(`Error saving vehicle ${vehicle}: ${data.error}`, 'error');
                         }
                         
-                        // Reset button state
-                        saveText.style.display = 'inline-block';
-                        loading.style.display = 'none';
-                        saveBtn.disabled = false;
-                    }
-                })
-                .catch(error => {
-                    errors++;
-                    console.error('Error:', error);
-                    showNotification(`Error saving vehicle ${vehicle}: ${error.message}`, 'error');
-                    
-                    if (completed + errors === vehicles.length) {
-                        saveText.style.display = 'inline-block';
-                        loading.style.display = 'none';
-                        saveBtn.disabled = false;
-                    }
-                });
+                        if (completed + errors === vehicles.length) {
+                            if (errors === 0) {
+                                showNotification(`${completed} fitness entries added successfully!`, 'success');
+                                closeFitnessModal();
+                                loadFitnessEntries('Pending');
+                            } else {
+                                showNotification(`${completed} entries saved, ${errors} errors`, 'warning');
+                            }
+                            
+                            // Reset button state
+                            saveText.style.display = 'inline-block';
+                            loading.style.display = 'none';
+                            saveBtn.disabled = false;
+                        }
+                    })
+                    .catch(error => {
+                        errors++;
+                        console.error('Error:', error);
+                        showNotification(`Error saving vehicle ${vehicle}: ${error.message}`, 'error');
+                        
+                        if (completed + errors === vehicles.length) {
+                            saveText.style.display = 'inline-block';
+                            loading.style.display = 'none';
+                            saveBtn.disabled = false;
+                        }
+                    });
+                }, index * 500); // 500ms delay between requests
             });
         }
         
@@ -1948,7 +1929,491 @@
                 notification.style.display = 'none';
             }, 4000);
         }
+                // Bulk Action Functions - ADD ALL THESE
+        function toggleFitnessSelection(entryId, checkbox) {
+            if (checkbox.checked) {
+                selectedFitnessEntries.add(entryId);
+            } else {
+                selectedFitnessEntries.delete(entryId);
+            }
+            updateFitnessBulkActions();
+        }
         
+        function toggle38ASelection(entryId, checkbox) {
+            if (checkbox.checked) {
+                selected38AEntries.add(entryId);
+            } else {
+                selected38AEntries.delete(entryId);
+            }
+            update38ABulkActions();
+        }
+        
+        function togglePendingFFSelection(entryId, checkbox) {
+            if (checkbox.checked) {
+                selectedPendingFFEntries.add(entryId);
+            } else {
+                selectedPendingFFEntries.delete(entryId);
+            }
+            updatePendingFFBulkActions();
+        }
+        
+        function updateFitnessBulkActions() {
+            const count = selectedFitnessEntries.size;
+            const bulkActions = document.getElementById('fitness-bulk-actions');
+            const selectedCount = document.getElementById('fitness-selected-count');
+            
+            if (selectedCount) selectedCount.textContent = `${count} selected`;
+            
+            if (bulkActions) {
+                if (count > 0) {
+                    bulkActions.classList.add('show');
+                    
+                    // Show/hide edit button based on selection count
+                    const editBtn = bulkActions.querySelector('.bulk-btn.edit');
+                    if (editBtn) {
+                        editBtn.style.display = count === 1 ? 'flex' : 'none';
+                    }
+                } else {
+                    bulkActions.classList.remove('show');
+                }
+            }
+        }
+        
+        function update38ABulkActions() {
+            const count = selected38AEntries.size;
+            const bulkActions = document.getElementById('38a-bulk-actions');
+            const selectedCount = document.getElementById('38a-selected-count');
+            
+            if (selectedCount) selectedCount.textContent = `${count} selected`;
+            
+            if (bulkActions) {
+                if (count > 0) {
+                    bulkActions.classList.add('show');
+                    
+                    const editBtn = bulkActions.querySelector('.bulk-btn.edit');
+                    if (editBtn) {
+                        editBtn.style.display = count === 1 ? 'flex' : 'none';
+                    }
+                } else {
+                    bulkActions.classList.remove('show');
+                }
+            }
+        }
+        
+        function updatePendingFFBulkActions() {
+            const count = selectedPendingFFEntries.size;
+            const bulkActions = document.getElementById('pending-ff-bulk-actions');
+            const selectedCount = document.getElementById('pending-ff-selected-count');
+            
+            if (selectedCount) selectedCount.textContent = `${count} selected`;
+            
+            if (bulkActions) {
+                if (count > 0) {
+                    bulkActions.classList.add('show');
+                } else {
+                    bulkActions.classList.remove('show');
+                }
+            }
+        }
+        
+        // Bulk Action Implementations - FITNESS
+        function approveFitnessEntries() {
+            if (selectedFitnessEntries.size === 0) {
+                showNotification('No entries selected', 'warning');
+                return;
+            }
+            
+            if (confirm(`Approve ${selectedFitnessEntries.size} fitness entries?`)) {
+                const formData = new URLSearchParams();
+                formData.append('action', 'approveFitnessEntries');
+                formData.append('entryIds', JSON.stringify(Array.from(selectedFitnessEntries)));
+                
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        selectedFitnessEntries.clear();
+                        loadFitnessEntries('Pending');
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error: ' + error.message, 'error');
+                });
+            }
+        }
+        
+        function undoFitnessEntries() {
+            if (selectedFitnessEntries.size === 0) {
+                showNotification('No entries selected', 'warning');
+                return;
+            }
+            
+            if (confirm(`Move ${selectedFitnessEntries.size} entries back to pending?`)) {
+                const formData = new URLSearchParams();
+                formData.append('action', 'undoFitnessEntries');
+                formData.append('entryIds', JSON.stringify(Array.from(selectedFitnessEntries)));
+                
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        selectedFitnessEntries.clear();
+                        loadFitnessEntries('Completed');
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error: ' + error.message, 'error');
+                });
+            }
+        }
+        
+        function editSelectedFitnessEntry() {
+            if (selectedFitnessEntries.size !== 1) {
+                showNotification('Please select exactly one entry to edit', 'warning');
+                return;
+            }
+            
+            const entryId = Array.from(selectedFitnessEntries)[0];
+            
+            fetch(`${API_URL}?action=getFitnessEntries&status=${currentFitnessStatus}`)
+                .then(response => response.json())
+                .then(data => {
+                    const entry = data.entries.find(e => e.EntryID === entryId);
+                    if (entry) {
+                        openFitnessModal(entry);
+                    } else {
+                        showNotification('Entry not found', 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error loading entry: ' + error.message, 'error');
+                });
+        }
+        
+        function deleteFitnessEntries() {
+            if (selectedFitnessEntries.size === 0) {
+                showNotification('No entries selected', 'warning');
+                return;
+            }
+            
+            if (confirm(`Delete ${selectedFitnessEntries.size} fitness entries? They will be moved to bin.`)) {
+                const formData = new URLSearchParams();
+                formData.append('action', 'deleteFitnessEntries');
+                formData.append('entryIds', JSON.stringify(Array.from(selectedFitnessEntries)));
+                
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        selectedFitnessEntries.clear();
+                        loadFitnessEntries(currentFitnessStatus);
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error: ' + error.message, 'error');
+                });
+            }
+        }
+        
+        // Bulk Action Implementations - 38-A
+        function approve38AEntries() {
+            if (selected38AEntries.size === 0) {
+                showNotification('No entries selected', 'warning');
+                return;
+            }
+            
+            if (confirm(`Approve ${selected38AEntries.size} 38-A entries and send to Completed 38-A & Pending FF?`)) {
+                const formData = new URLSearchParams();
+                formData.append('action', 'approve38AEntries');
+                formData.append('entryIds', JSON.stringify(Array.from(selected38AEntries)));
+                
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        selected38AEntries.clear();
+                        load38AEntries('Pending');
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error: ' + error.message, 'error');
+                });
+            }
+        }
+        
+        function undo38AEntries() {
+            if (selected38AEntries.size === 0) {
+                showNotification('No entries selected', 'warning');
+                return;
+            }
+            
+            if (confirm(`Move ${selected38AEntries.size} entries back to pending?`)) {
+                const formData = new URLSearchParams();
+                formData.append('action', 'undo38AEntries');
+                formData.append('entryIds', JSON.stringify(Array.from(selected38AEntries)));
+                
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        selected38AEntries.clear();
+                        load38AEntries('Completed');
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error: ' + error.message, 'error');
+                });
+            }
+        }
+        
+        function editSelected38AEntry() {
+            if (selected38AEntries.size !== 1) {
+                showNotification('Please select exactly one entry to edit', 'warning');
+                return;
+            }
+            
+            const entryId = Array.from(selected38AEntries)[0];
+            
+            fetch(`${API_URL}?action=get38AEntries&status=${current38AStatus}`)
+                .then(response => response.json())
+                .then(data => {
+                    const entry = data.entries.find(e => e.EntryID === entryId);
+                    if (entry) {
+                        open38AModal(entry);
+                    } else {
+                        showNotification('Entry not found', 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error loading entry: ' + error.message, 'error');
+                });
+        }
+        
+        function delete38AEntries() {
+            if (selected38AEntries.size === 0) {
+                showNotification('No entries selected', 'warning');
+                return;
+            }
+            
+            if (confirm(`Delete ${selected38AEntries.size} 38-A entries? They will be moved to bin.`)) {
+                const formData = new URLSearchParams();
+                formData.append('action', 'delete38AEntries');
+                formData.append('entryIds', JSON.stringify(Array.from(selected38AEntries)));
+                
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        selected38AEntries.clear();
+                        load38AEntries(current38AStatus);
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error: ' + error.message, 'error');
+                });
+            }
+        }
+        
+        // Bulk Action Implementations - PENDING FF
+        function approvePendingFFEntries() {
+            if (selectedPendingFFEntries.size === 0) {
+                showNotification('No entries selected', 'warning');
+                return;
+            }
+            
+            if (confirm(`Approve ${selectedPendingFFEntries.size} entries and send to Fitness Pending?`)) {
+                const formData = new URLSearchParams();
+                formData.append('action', 'approvePendingFF');
+                formData.append('entryIds', JSON.stringify(Array.from(selectedPendingFFEntries)));
+                
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        selectedPendingFFEntries.clear();
+                        loadPendingFFEntries();
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error: ' + error.message, 'error');
+                });
+            }
+        }
+        
+        // Category Management Functions - ADD THESE TOO
+        function addFitnessApproval() {
+            const input = document.getElementById('new-fitness-approval');
+            const name = input.value.trim();
+            
+            if (!name) {
+                showNotification('Please enter a category name', 'warning');
+                return;
+            }
+            
+            const formData = new URLSearchParams();
+            formData.append('action', 'addCategory');
+            formData.append('sheetName', 'FitnessApprovalFrom');
+            formData.append('name', name);
+            
+            fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Category added successfully!', 'success');
+                    input.value = '';
+                    loadFitnessCategories();
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('Error: ' + error.message, 'error');
+            });
+        }
+        
+        function addFitnessClient() {
+            const input = document.getElementById('new-fitness-client');
+            const name = input.value.trim();
+            
+            if (!name) {
+                showNotification('Please enter a category name', 'warning');
+                return;
+            }
+            
+            const formData = new URLSearchParams();
+            formData.append('action', 'addCategory');
+            formData.append('sheetName', 'FitnessClient');
+            formData.append('name', name);
+            
+            fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Category added successfully!', 'success');
+                    input.value = '';
+                    loadFitnessCategories();
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('Error: ' + error.message, 'error');
+            });
+        }
+        
+        function add38AApproval() {
+            const input = document.getElementById('new-38a-approval');
+            const name = input.value.trim();
+            
+            if (!name) {
+                showNotification('Please enter a category name', 'warning');
+                return;
+            }
+            
+            const formData = new URLSearchParams();
+            formData.append('action', 'addCategory');
+            formData.append('sheetName', '38AApprovalFrom');
+            formData.append('name', name);
+            
+            fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Category added successfully!', 'success');
+                    input.value = '';
+                    load38ACategories();
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('Error: ' + error.message, 'error');
+            });
+        }
+        
+        function add38AClient() {
+            const input = document.getElementById('new-38a-client');
+            const name = input.value.trim();
+            
+            if (!name) {
+                showNotification('Please enter a category name', 'warning');
+                return;
+            }
+            
+            const formData = new URLSearchParams();
+            formData.append('action', 'addCategory');
+            formData.append('sheetName', '38AClient');
+            formData.append('name', name);
+            
+            fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Category added successfully!', 'success');
+                    input.value = '';
+                    load38ACategories();
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('Error: ' + error.message, 'error');
+            });
+        }
         // Close modals when clicking outside
         window.addEventListener('click', function(e) {
             if (e.target === document.getElementById('fitness-modal')) {
@@ -1961,6 +2426,7 @@
     </script>
 </body>
 </html>
+
 
 
 
