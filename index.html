@@ -1,0 +1,1866 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Vehicle Management System</title>
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.4.0/css/all.min.css">
+    <script src="https://cdn.jsdelivr.net/npm/papaparse@5.4.1/papaparse.min.js"></script>
+    <style>
+        :root {
+            --primary-bg: #0a0a0a;
+            --secondary-bg: #1a1a1a;
+            --card-bg: #2a2a2a;
+            --accent-blue: #2563eb;
+            --accent-green: #16a34a;
+            --accent-red: #dc2626;
+            --accent-yellow: #d97706;
+            --accent-purple: #7c3aed;
+            --text-primary: #ffffff;
+            --text-secondary: #d4d4d4;
+            --text-muted: #a3a3a3;
+            --border-color: #404040;
+            --success-color: #22c55e;
+            --warning-color: #eab308;
+            --danger-color: #ef4444;
+            --border-radius: 12px;
+            --shadow: 0 4px 6px -1px rgba(0, 0, 0, 0.5), 0 2px 4px -1px rgba(0, 0, 0, 0.4);
+        }
+        
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            font-family: 'Segoe UI', Tahoma, Geneva, Verdana, sans-serif;
+        }
+        
+        body {
+            background: linear-gradient(135deg, var(--primary-bg), #1e293b);
+            color: var(--text-primary);
+            line-height: 1.6;
+            min-height: 100vh;
+            padding: 15px;
+            padding-bottom: 80px;
+        }
+        
+        .container {
+            max-width: 800px;
+            margin: 0 auto;
+        }
+        
+        header {
+            text-align: center;
+            margin-bottom: 30px;
+            padding: 20px 0;
+        }
+        
+        .app-title {
+            font-size: 2rem;
+            font-weight: 800;
+            margin-bottom: 10px;
+            background: linear-gradient(135deg, var(--accent-blue), var(--accent-purple));
+            -webkit-background-clip: text;
+            -webkit-text-fill-color: transparent;
+            background-clip: text;
+        }
+        
+        .app-subtitle {
+            color: var(--text-muted);
+            font-size: 1rem;
+        }
+        
+        .main-menu {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+        
+        .menu-btn {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 25px 15px;
+            color: var(--text-primary);
+            font-size: 1.3rem;
+            font-weight: 700;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            text-decoration: none;
+            box-shadow: var(--shadow);
+        }
+        
+        .menu-btn:hover {
+            transform: translateY(-3px);
+            border-color: var(--accent-blue);
+            box-shadow: 0 10px 25px -5px rgba(0, 0, 0, 0.6);
+        }
+        
+        .menu-btn.fitness {
+            border-color: var(--accent-green);
+        }
+        
+        .menu-btn.fitness:hover {
+            border-color: var(--accent-green);
+            background: linear-gradient(135deg, var(--card-bg), #166534);
+        }
+        
+        .menu-btn.permits {
+            border-color: var(--accent-blue);
+        }
+        
+        .menu-btn.permits:hover {
+            border-color: var(--accent-blue);
+            background: linear-gradient(135deg, var(--card-bg), #1e40af);
+        }
+        
+        .menu-icon {
+            font-size: 2rem;
+            margin-bottom: 5px;
+        }
+        
+        .section {
+            display: none;
+            animation: fadeIn 0.3s ease;
+        }
+        
+        .section.active {
+            display: block;
+        }
+        
+        .section-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 20px;
+            padding-bottom: 10px;
+            border-bottom: 2px solid var(--border-color);
+        }
+        
+        .section-title {
+            font-size: 1.5rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .back-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 10px 15px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            font-weight: 600;
+            transition: all 0.3s ease;
+        }
+        
+        .back-btn:hover {
+            background: var(--secondary-bg);
+            border-color: var(--accent-blue);
+        }
+        
+        .action-buttons {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 12px;
+            margin-bottom: 25px;
+        }
+        
+        @media (min-width: 480px) {
+            .action-buttons {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        .action-btn {
+            background: var(--card-bg);
+            border: 2px solid var(--border-color);
+            border-radius: var(--border-radius);
+            padding: 18px 15px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 10px;
+            box-shadow: var(--shadow);
+        }
+        
+        .action-btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 8px 20px -5px rgba(0, 0, 0, 0.6);
+        }
+        
+        .action-btn.add {
+            border-color: var(--accent-green);
+            background: linear-gradient(135deg, var(--card-bg), #15803d);
+        }
+        
+        .action-btn.pending {
+            border-color: var(--accent-yellow);
+            background: linear-gradient(135deg, var(--card-bg), #ca8a04);
+        }
+        
+        .action-btn.completed {
+            border-color: var(--accent-blue);
+            background: linear-gradient(135deg, var(--card-bg), #1d4ed8);
+        }
+        
+        .action-btn.ff {
+            border-color: var(--accent-purple);
+            background: linear-gradient(135deg, var(--card-bg), #7c3aed);
+        }
+        
+        .entries-container {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            padding: 20px;
+            box-shadow: var(--shadow);
+            border: 1px solid var(--border-color);
+        }
+        
+        .entries-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin-bottom: 15px;
+            padding-bottom: 10px;
+            border-bottom: 1px solid var(--border-color);
+        }
+        
+        .entries-title {
+            font-size: 1.2rem;
+            font-weight: 600;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+        }
+        
+        .bulk-actions {
+            display: none;
+            gap: 10px;
+            align-items: center;
+        }
+        
+        .bulk-actions.show {
+            display: flex;
+        }
+        
+        .bulk-btn {
+            padding: 8px 12px;
+            border: none;
+            border-radius: 6px;
+            font-size: 0.8rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 5px;
+            transition: all 0.3s ease;
+        }
+        
+        .bulk-btn.approve {
+            background: var(--accent-green);
+            color: white;
+        }
+        
+        .bulk-btn.undo {
+            background: var(--accent-yellow);
+            color: white;
+        }
+        
+        .bulk-btn.delete {
+            background: var(--accent-red);
+            color: white;
+        }
+        
+        .bulk-btn.edit {
+            background: var(--accent-blue);
+            color: white;
+        }
+        
+        .bulk-btn.ff {
+            background: var(--accent-purple);
+            color: white;
+        }
+        
+        .selected-count {
+            font-size: 0.8rem;
+            color: var(--text-muted);
+            margin-right: 10px;
+        }
+        
+        .entries-list {
+            max-height: 500px;
+            overflow-y: auto;
+        }
+        
+        .entry-item {
+            background: var(--secondary-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 10px;
+            transition: all 0.3s ease;
+            display: flex;
+            align-items: flex-start;
+            gap: 12px;
+        }
+        
+        .entry-item:hover {
+            border-color: var(--accent-blue);
+            transform: translateY(-1px);
+        }
+        
+        .entry-item.incomplete {
+            border-left: 4px solid var(--accent-red);
+            background: linear-gradient(135deg, var(--secondary-bg), #450a0a);
+        }
+        
+        .entry-checkbox {
+            margin-top: 3px;
+        }
+        
+        .entry-content {
+            flex: 1;
+        }
+        
+        .entry-header {
+            display: flex;
+            justify-content: space-between;
+            align-items: flex-start;
+            margin-bottom: 8px;
+        }
+        
+        .entry-vehicle {
+            font-weight: 700;
+            font-size: 1.1rem;
+            color: var(--text-primary);
+        }
+        
+        .entry-date {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+        }
+        
+        .entry-details {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 5px;
+        }
+        
+        @media (min-width: 480px) {
+            .entry-details {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        .entry-detail {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .detail-label {
+            color: var(--text-muted);
+            font-size: 0.85rem;
+            min-width: 100px;
+        }
+        
+        .detail-value {
+            color: var(--text-primary);
+            font-size: 0.9rem;
+            font-weight: 500;
+        }
+        
+        .entry-remarks {
+            margin-top: 8px;
+            padding-top: 8px;
+            border-top: 1px solid var(--border-color);
+            color: var(--text-secondary);
+            font-size: 0.85rem;
+            font-style: italic;
+        }
+        
+        .no-entries {
+            text-align: center;
+            padding: 40px 20px;
+            color: var(--text-muted);
+        }
+        
+        .no-entries i {
+            font-size: 3rem;
+            margin-bottom: 15px;
+            opacity: 0.5;
+        }
+        
+        /* Modal Styles */
+        .modal {
+            display: none;
+            position: fixed;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            background: rgba(0, 0, 0, 0.8);
+            z-index: 1000;
+            align-items: center;
+            justify-content: center;
+            padding: 20px;
+            backdrop-filter: blur(5px);
+        }
+        
+        .modal-content {
+            background: var(--card-bg);
+            border-radius: var(--border-radius);
+            width: 100%;
+            max-width: 500px;
+            max-height: 90vh;
+            overflow-y: auto;
+            box-shadow: 0 25px 50px -12px rgba(0, 0, 0, 0.8);
+            border: 1px solid var(--border-color);
+            animation: modalAppear 0.3s ease;
+        }
+        
+        @keyframes modalAppear {
+            from {
+                opacity: 0;
+                transform: translateY(-20px) scale(0.95);
+            }
+            to {
+                opacity: 1;
+                transform: translateY(0) scale(1);
+            }
+        }
+        
+        @keyframes fadeIn {
+            from { opacity: 0; }
+            to { opacity: 1; }
+        }
+        
+        .modal-header {
+            padding: 20px;
+            background: var(--secondary-bg);
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .modal-title {
+            font-size: 1.3rem;
+            font-weight: 700;
+            display: flex;
+            align-items: center;
+            gap: 10px;
+        }
+        
+        .close-btn {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            font-size: 1.5rem;
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: color 0.3s ease;
+        }
+        
+        .close-btn:hover {
+            color: var(--text-primary);
+        }
+        
+        .modal-body {
+            padding: 20px;
+        }
+        
+        .form-group {
+            margin-bottom: 20px;
+        }
+        
+        .form-label {
+            display: block;
+            margin-bottom: 8px;
+            font-weight: 600;
+            color: var(--text-primary);
+            font-size: 0.95rem;
+        }
+        
+        .form-input, .form-select, .form-textarea {
+            width: 100%;
+            padding: 12px 15px;
+            background: var(--secondary-bg);
+            border: 2px solid var(--border-color);
+            border-radius: 8px;
+            color: var(--text-primary);
+            font-size: 1rem;
+            transition: border-color 0.3s ease;
+        }
+        
+        .form-input:focus, .form-select:focus, .form-textarea:focus {
+            outline: none;
+            border-color: var(--accent-blue);
+        }
+        
+        .form-textarea {
+            resize: vertical;
+            min-height: 80px;
+        }
+        
+        .form-actions {
+            display: flex;
+            gap: 12px;
+            justify-content: flex-end;
+            margin-top: 25px;
+        }
+        
+        .btn {
+            padding: 12px 20px;
+            border: none;
+            border-radius: 8px;
+            font-size: 0.95rem;
+            font-weight: 600;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            gap: 8px;
+            transition: all 0.3s ease;
+        }
+        
+        .btn-primary {
+            background: var(--accent-blue);
+            color: white;
+        }
+        
+        .btn-secondary {
+            background: var(--secondary-bg);
+            color: var(--text-primary);
+            border: 1px solid var(--border-color);
+        }
+        
+        .btn-success {
+            background: var(--accent-green);
+            color: white;
+        }
+        
+        .btn-danger {
+            background: var(--accent-red);
+            color: white;
+        }
+        
+        .btn:hover {
+            transform: translateY(-2px);
+            box-shadow: 0 5px 15px -5px rgba(0, 0, 0, 0.5);
+        }
+        
+        .loading {
+            display: inline-block;
+            width: 16px;
+            height: 16px;
+            border: 2px solid rgba(255,255,255,.3);
+            border-radius: 50%;
+            border-top-color: #fff;
+            animation: spin 1s ease-in-out infinite;
+        }
+        
+        @keyframes spin {
+            to { transform: rotate(360deg); }
+        }
+        
+        .notification {
+            position: fixed;
+            top: 20px;
+            right: 20px;
+            padding: 15px 20px;
+            border-radius: var(--border-radius);
+            color: white;
+            font-weight: 600;
+            z-index: 1100;
+            display: none;
+            box-shadow: var(--shadow);
+            animation: slideIn 0.3s ease;
+            max-width: 400px;
+        }
+        
+        @keyframes slideIn {
+            from {
+                opacity: 0;
+                transform: translateX(100%);
+            }
+            to {
+                opacity: 1;
+                transform: translateX(0);
+            }
+        }
+        
+        .notification.success {
+            background: linear-gradient(135deg, var(--accent-green), #15803d);
+        }
+        
+        .notification.error {
+            background: linear-gradient(135deg, var(--accent-red), #b91c1c);
+        }
+        
+        .notification.warning {
+            background: linear-gradient(135deg, var(--accent-yellow), #a16207);
+        }
+        
+        /* Category Management */
+        .categories-management {
+            background: var(--secondary-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin-bottom: 20px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .category-form {
+            display: flex;
+            gap: 10px;
+            margin-bottom: 15px;
+        }
+        
+        .category-input {
+            flex: 1;
+        }
+        
+        .categories-list {
+            max-height: 200px;
+            overflow-y: auto;
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+        }
+        
+        .category-item {
+            padding: 10px 15px;
+            border-bottom: 1px solid var(--border-color);
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+        
+        .category-item:last-child {
+            border-bottom: none;
+        }
+        
+        .category-actions {
+            display: flex;
+            gap: 8px;
+        }
+        
+        .category-actions button {
+            background: none;
+            border: none;
+            color: var(--text-muted);
+            cursor: pointer;
+            padding: 5px;
+            border-radius: 4px;
+            transition: color 0.3s ease;
+        }
+        
+        .category-actions button:hover {
+            color: var(--text-primary);
+        }
+        
+        /* Export Section */
+        .export-section {
+            background: var(--secondary-bg);
+            border-radius: 8px;
+            padding: 15px;
+            margin-top: 20px;
+            border: 1px solid var(--border-color);
+        }
+        
+        .export-buttons {
+            display: grid;
+            grid-template-columns: 1fr;
+            gap: 10px;
+        }
+        
+        @media (min-width: 480px) {
+            .export-buttons {
+                grid-template-columns: 1fr 1fr;
+            }
+        }
+        
+        .export-btn {
+            background: var(--card-bg);
+            border: 1px solid var(--border-color);
+            border-radius: 6px;
+            padding: 12px 15px;
+            color: var(--text-primary);
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            gap: 8px;
+            font-weight: 500;
+            transition: all 0.3s ease;
+        }
+        
+        .export-btn:hover {
+            background: var(--accent-blue);
+            border-color: var(--accent-blue);
+        }
+        
+        /* Custom Scrollbar */
+        ::-webkit-scrollbar {
+            width: 8px;
+        }
+        
+        ::-webkit-scrollbar-track {
+            background: var(--secondary-bg);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb {
+            background: var(--border-color);
+            border-radius: 10px;
+        }
+        
+        ::-webkit-scrollbar-thumb:hover {
+            background: var(--accent-blue);
+        }
+    </style>
+</head>
+<body>
+    <div class="container">
+        <!-- Main Menu -->
+        <header>
+            <h1 class="app-title">Vehicle Management System</h1>
+            <p class="app-subtitle">Track Fitness & 38-A Permits</p>
+        </header>
+        
+        <div class="main-menu" id="main-menu">
+            <button class="menu-btn fitness" onclick="showSection('fitness-menu')">
+                <i class="fas fa-dumbbell menu-icon"></i>
+                FITNESS
+            </button>
+            <button class="menu-btn permits" onclick="showSection('38a-menu')">
+                <i class="fas fa-file-contract menu-icon"></i>
+                38-A
+            </button>
+        </div>
+        
+        <!-- Fitness Section -->
+        <div class="section" id="fitness-section">
+            <div class="section-header">
+                <button class="back-btn" onclick="showMainMenu()">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+                <h2 class="section-title">
+                    <i class="fas fa-dumbbell"></i> Fitness Management
+                </h2>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="action-btn add" onclick="openFitnessModal()">
+                    <i class="fas fa-plus-circle"></i> Add Fitness Entry
+                </button>
+                <button class="action-btn pending" onclick="loadFitnessEntries('Pending')">
+                    <i class="fas fa-clock"></i> Pending Fitness
+                </button>
+                <button class="action-btn completed" onclick="loadFitnessEntries('Completed')">
+                    <i class="fas fa-check-circle"></i> Completed Fitness
+                </button>
+            </div>
+            
+            <div class="entries-container" id="fitness-entries-container">
+                <div class="no-entries" id="fitness-no-entries">
+                    <i class="fas fa-dumbbell"></i>
+                    <p>Select an option above to view entries</p>
+                </div>
+            </div>
+        </div>
+        
+        <!-- 38-A Section -->
+        <div class="section" id="38a-section">
+            <div class="section-header">
+                <button class="back-btn" onclick="showMainMenu()">
+                    <i class="fas fa-arrow-left"></i> Back
+                </button>
+                <h2 class="section-title">
+                    <i class="fas fa-file-contract"></i> 38-A Management
+                </h2>
+            </div>
+            
+            <div class="action-buttons">
+                <button class="action-btn add" onclick="open38AModal()">
+                    <i class="fas fa-plus-circle"></i> Add 38-A Entry
+                </button>
+                <button class="action-btn pending" onclick="load38AEntries('Pending')">
+                    <i class="fas fa-clock"></i> Pending 38-A
+                </button>
+                <button class="action-btn completed" onclick="load38AEntries('Completed')">
+                    <i class="fas fa-check-circle"></i> Completed 38-A
+                </button>
+                <button class="action-btn ff" onclick="loadPendingFFEntries()">
+                    <i class="fas fa-forward"></i> Pending FF
+                </button>
+            </div>
+            
+            <div class="entries-container" id="38a-entries-container">
+                <div class="no-entries" id="38a-no-entries">
+                    <i class="fas fa-file-contract"></i>
+                    <p>Select an option above to view entries</p>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Fitness Modal -->
+    <div class="modal" id="fitness-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-dumbbell"></i> 
+                    <span id="fitness-modal-title">Add Fitness Entry</span>
+                </h3>
+                <button class="close-btn" onclick="closeFitnessModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="fitness-form">
+                    <input type="hidden" id="fitness-entry-id">
+                    <div class="form-group">
+                        <label class="form-label" for="fitness-date">Fitness Entry Date *</label>
+                        <input type="date" class="form-input" id="fitness-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="fitness-approval-from">Fitness Approval From *</label>
+                        <select class="form-select" id="fitness-approval-from" required>
+                            <option value="">Select Approval From</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="fitness-client">Fitness Client *</label>
+                        <select class="form-select" id="fitness-client" required>
+                            <option value="">Select Client</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="fitness-vehicle">Vehicle Number *</label>
+                        <input type="text" class="form-input" id="fitness-vehicle" 
+                               placeholder="e.g., MH12GB1301" required 
+                               pattern="[A-Za-z0-9]+" title="Alphanumeric vehicle number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="fitness-remarks">Fitness Remark (Optional)</label>
+                        <textarea class="form-textarea" id="fitness-remarks" 
+                                  placeholder="Add any remarks or comments"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="closeFitnessModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="fitness-save-btn">
+                            <span id="fitness-save-text">Save Entry</span>
+                            <div class="loading" id="fitness-loading" style="display: none;"></div>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Category Management for Fitness -->
+                <div class="categories-management">
+                    <h4 style="margin-bottom: 15px; color: var(--text-primary);">Manage Categories</h4>
+                    
+                    <div class="category-form">
+                        <input type="text" class="form-input category-input" id="new-fitness-approval" placeholder="New Approval From">
+                        <button class="btn btn-success" onclick="addFitnessApproval()">Add</button>
+                    </div>
+                    
+                    <div class="category-form">
+                        <input type="text" class="form-input category-input" id="new-fitness-client" placeholder="New Client">
+                        <button class="btn btn-success" onclick="addFitnessClient()">Add</button>
+                    </div>
+                    
+                    <div class="categories-list" id="fitness-categories-list">
+                        <!-- Categories will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- 38-A Modal -->
+    <div class="modal" id="38a-modal">
+        <div class="modal-content">
+            <div class="modal-header">
+                <h3 class="modal-title">
+                    <i class="fas fa-file-contract"></i> 
+                    <span id="38a-modal-title">Add 38-A Entry</span>
+                </h3>
+                <button class="close-btn" onclick="close38AModal()">&times;</button>
+            </div>
+            <div class="modal-body">
+                <form id="38a-form">
+                    <input type="hidden" id="38a-entry-id">
+                    <div class="form-group">
+                        <label class="form-label" for="38a-date">38-A Entry Date *</label>
+                        <input type="date" class="form-input" id="38a-date" required>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="38a-approval-from">38-A Approval From *</label>
+                        <select class="form-select" id="38a-approval-from" required>
+                            <option value="">Select Approval From</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="38a-client">38-A Client *</label>
+                        <select class="form-select" id="38a-client" required>
+                            <option value="">Select Client</option>
+                        </select>
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="38a-vehicle">Vehicle Number *</label>
+                        <input type="text" class="form-input" id="38a-vehicle" 
+                               placeholder="e.g., MH12GB1301" required 
+                               pattern="[A-Za-z0-9]+" title="Alphanumeric vehicle number">
+                    </div>
+                    <div class="form-group">
+                        <label class="form-label" for="38a-remarks">38-A Remark (Optional)</label>
+                        <textarea class="form-textarea" id="38a-remarks" 
+                                  placeholder="Add any remarks or comments"></textarea>
+                    </div>
+                    <div class="form-actions">
+                        <button type="button" class="btn btn-secondary" onclick="close38AModal()">Cancel</button>
+                        <button type="submit" class="btn btn-primary" id="38a-save-btn">
+                            <span id="38a-save-text">Save Entry</span>
+                            <div class="loading" id="38a-loading" style="display: none;"></div>
+                        </button>
+                    </div>
+                </form>
+                
+                <!-- Category Management for 38-A -->
+                <div class="categories-management">
+                    <h4 style="margin-bottom: 15px; color: var(--text-primary);">Manage Categories</h4>
+                    
+                    <div class="category-form">
+                        <input type="text" class="form-input category-input" id="new-38a-approval" placeholder="New Approval From">
+                        <button class="btn btn-success" onclick="add38AApproval()">Add</button>
+                    </div>
+                    
+                    <div class="category-form">
+                        <input type="text" class="form-input category-input" id="new-38a-client" placeholder="New Client">
+                        <button class="btn btn-success" onclick="add38AClient()">Add</button>
+                    </div>
+                    
+                    <div class="categories-list" id="38a-categories-list">
+                        <!-- Categories will be loaded here -->
+                    </div>
+                </div>
+            </div>
+        </div>
+    </div>
+    
+    <!-- Notification -->
+    <div class="notification" id="notification"></div>
+
+    <script>
+        // Configuration - UPDATE THIS WITH YOUR GOOGLE APPS SCRIPT URL
+        const API_URL = 'PASTE_YOUR_WEB_APP_URL_HERE';
+        
+        // Global state
+        let currentSection = 'main';
+        let selectedFitnessEntries = new Set();
+        let selected38AEntries = new Set();
+        let selectedPendingFFEntries = new Set();
+        let currentFitnessStatus = '';
+        let current38AStatus = '';
+        let isEditingFitness = false;
+        let isEditing38A = false;
+        
+        // Set today's date as default
+        document.addEventListener('DOMContentLoaded', function() {
+            const today = new Date().toISOString().split('T')[0];
+            document.getElementById('fitness-date').value = today;
+            document.getElementById('38a-date').value = today;
+            
+            loadFitnessCategories();
+            load38ACategories();
+        });
+        
+        // Navigation functions
+        function showMainMenu() {
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById('main-menu').style.display = 'grid';
+            currentSection = 'main';
+            
+            // Clear selections
+            selectedFitnessEntries.clear();
+            selected38AEntries.clear();
+            selectedPendingFFEntries.clear();
+            updateBulkActions();
+        }
+        
+        function showSection(sectionId) {
+            document.querySelectorAll('.section').forEach(section => {
+                section.classList.remove('active');
+            });
+            document.getElementById('main-menu').style.display = 'none';
+            
+            if (sectionId === 'fitness-menu') {
+                document.getElementById('fitness-section').classList.add('active');
+                currentSection = 'fitness';
+            } else if (sectionId === '38a-menu') {
+                document.getElementById('38a-section').classList.add('active');
+                currentSection = '38a';
+            }
+        }
+        
+        // Fitness Functions
+        function openFitnessModal(entry = null) {
+            isEditingFitness = entry !== null;
+            
+            if (isEditingFitness) {
+                document.getElementById('fitness-modal-title').textContent = 'Edit Fitness Entry';
+                document.getElementById('fitness-entry-id').value = entry.EntryID;
+                document.getElementById('fitness-date').value = entry.Date;
+                document.getElementById('fitness-vehicle').value = entry.VehicleNumber;
+                document.getElementById('fitness-remarks').value = entry.Remarks || '';
+                
+                // Set dropdown values after a short delay to ensure options are loaded
+                setTimeout(() => {
+                    document.getElementById('fitness-approval-from').value = entry.ApprovalFrom;
+                    document.getElementById('fitness-client').value = entry.Client;
+                }, 100);
+            } else {
+                document.getElementById('fitness-modal-title').textContent = 'Add Fitness Entry';
+                document.getElementById('fitness-form').reset();
+                document.getElementById('fitness-date').value = new Date().toISOString().split('T')[0];
+            }
+            
+            document.getElementById('fitness-modal').style.display = 'flex';
+        }
+        
+        function closeFitnessModal() {
+            document.getElementById('fitness-modal').style.display = 'none';
+            isEditingFitness = false;
+        }
+        
+        function loadFitnessEntries(status) {
+            currentFitnessStatus = status;
+            const container = document.getElementById('fitness-entries-container');
+            const noEntries = document.getElementById('fitness-no-entries');
+            
+            fetch(`${API_URL}?action=getFitnessEntries&status=${status}`)
+                .then(response => response.json())
+                .then(data => {
+                    displayFitnessEntries(data.entries || [], status);
+                })
+                .catch(error => {
+                    showNotification('Error loading fitness entries: ' + error.message, 'error');
+                    container.innerHTML = `<div class="no-entries"><p>Error loading entries</p></div>`;
+                });
+        }
+        
+        function displayFitnessEntries(entries, status) {
+            const container = document.getElementById('fitness-entries-container');
+            const title = status === 'Pending' ? 'Pending Fitness Entries' : 'Completed Fitness Entries';
+            
+            if (entries.length === 0) {
+                container.innerHTML = `
+                    <div class="entries-header">
+                        <h3 class="entries-title">${title}</h3>
+                    </div>
+                    <div class="no-entries">
+                        <i class="fas fa-dumbbell"></i>
+                        <p>No ${status.toLowerCase()} fitness entries found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let bulkActions = '';
+            if (status === 'Pending') {
+                bulkActions = `
+                    <div class="bulk-actions" id="fitness-bulk-actions">
+                        <span class="selected-count" id="fitness-selected-count">0 selected</span>
+                        <button class="bulk-btn approve" onclick="approveFitnessEntries()">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="bulk-btn edit" onclick="editSelectedFitnessEntry()">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="bulk-btn delete" onclick="deleteFitnessEntries()">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+            } else {
+                bulkActions = `
+                    <div class="bulk-actions" id="fitness-bulk-actions">
+                        <span class="selected-count" id="fitness-selected-count">0 selected</span>
+                        <button class="bulk-btn undo" onclick="undoFitnessEntries()">
+                            <i class="fas fa-undo"></i> Undo
+                        </button>
+                    </div>
+                `;
+            }
+            
+            let entriesHTML = entries.map(entry => {
+                const isIncomplete = !entry.ApprovalFrom || !entry.Client || !entry.Date;
+                const incompleteClass = isIncomplete ? 'incomplete' : '';
+                
+                return `
+                    <div class="entry-item ${incompleteClass}">
+                        <input type="checkbox" class="entry-checkbox" 
+                               onchange="toggleFitnessSelection('${entry.EntryID}', this)"
+                               ${selectedFitnessEntries.has(entry.EntryID) ? 'checked' : ''}>
+                        <div class="entry-content">
+                            <div class="entry-header">
+                                <div class="entry-vehicle">${entry.VehicleNumber}</div>
+                                <div class="entry-date">${formatDate(entry.Date)}</div>
+                            </div>
+                            <div class="entry-details">
+                                <div class="entry-detail">
+                                    <span class="detail-label">Approval From:</span>
+                                    <span class="detail-value">${entry.ApprovalFrom || 'Not set'}</span>
+                                </div>
+                                <div class="entry-detail">
+                                    <span class="detail-label">Client:</span>
+                                    <span class="detail-value">${entry.Client || 'Not set'}</span>
+                                </div>
+                            </div>
+                            ${entry.Remarks ? `<div class="entry-remarks">${entry.Remarks}</div>` : ''}
+                            ${isIncomplete ? `<div class="entry-remarks" style="color: var(--accent-red); font-weight: bold;">INCOMPLETE ENTRY - Please edit to complete</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = `
+                <div class="entries-header">
+                    <h3 class="entries-title">${title} (${entries.length})</h3>
+                    ${bulkActions}
+                </div>
+                <div class="entries-list">
+                    ${entriesHTML}
+                </div>
+                ${status === 'Pending' ? `
+                <div class="export-section">
+                    <h4 style="margin-bottom: 10px;">Export Data</h4>
+                    <div class="export-buttons">
+                        <button class="export-btn" onclick="exportFitnessData('Pending')">
+                            <i class="fas fa-file-export"></i> Export Pending Fitness
+                        </button>
+                        <button class="export-btn" onclick="exportFitnessData('Completed')">
+                            <i class="fas fa-file-export"></i> Export Completed Fitness
+                        </button>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            updateFitnessBulkActions();
+        }
+        
+        // 38-A Functions (similar structure but for 38-A)
+        function open38AModal(entry = null) {
+            isEditing38A = entry !== null;
+            
+            if (isEditing38A) {
+                document.getElementById('38a-modal-title').textContent = 'Edit 38-A Entry';
+                document.getElementById('38a-entry-id').value = entry.EntryID;
+                document.getElementById('38a-date').value = entry.Date;
+                document.getElementById('38a-vehicle').value = entry.VehicleNumber;
+                document.getElementById('38a-remarks').value = entry.Remarks || '';
+                
+                setTimeout(() => {
+                    document.getElementById('38a-approval-from').value = entry.ApprovalFrom;
+                    document.getElementById('38a-client').value = entry.Client;
+                }, 100);
+            } else {
+                document.getElementById('38a-modal-title').textContent = 'Add 38-A Entry';
+                document.getElementById('38a-form').reset();
+                document.getElementById('38a-date').value = new Date().toISOString().split('T')[0];
+            }
+            
+            document.getElementById('38a-modal').style.display = 'flex';
+        }
+        
+        function close38AModal() {
+            document.getElementById('38a-modal').style.display = 'none';
+            isEditing38A = false;
+        }
+        
+        function load38AEntries(status) {
+            current38AStatus = status;
+            const container = document.getElementById('38a-entries-container');
+            
+            fetch(`${API_URL}?action=get38AEntries&status=${status}`)
+                .then(response => response.json())
+                .then(data => {
+                    display38AEntries(data.entries || [], status);
+                })
+                .catch(error => {
+                    showNotification('Error loading 38-A entries: ' + error.message, 'error');
+                    container.innerHTML = `<div class="no-entries"><p>Error loading entries</p></div>`;
+                });
+        }
+        
+        function display38AEntries(entries, status) {
+            const container = document.getElementById('38a-entries-container');
+            const title = status === 'Pending' ? 'Pending 38-A Entries' : 'Completed 38-A Entries';
+            
+            if (entries.length === 0) {
+                container.innerHTML = `
+                    <div class="entries-header">
+                        <h3 class="entries-title">${title}</h3>
+                    </div>
+                    <div class="no-entries">
+                        <i class="fas fa-file-contract"></i>
+                        <p>No ${status.toLowerCase()} 38-A entries found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            let bulkActions = '';
+            if (status === 'Pending') {
+                bulkActions = `
+                    <div class="bulk-actions" id="38a-bulk-actions">
+                        <span class="selected-count" id="38a-selected-count">0 selected</span>
+                        <button class="bulk-btn approve" onclick="approve38AEntries()">
+                            <i class="fas fa-check"></i> Approve
+                        </button>
+                        <button class="bulk-btn edit" onclick="editSelected38AEntry()">
+                            <i class="fas fa-edit"></i> Edit
+                        </button>
+                        <button class="bulk-btn delete" onclick="delete38AEntries()">
+                            <i class="fas fa-trash"></i> Delete
+                        </button>
+                    </div>
+                `;
+            } else {
+                bulkActions = `
+                    <div class="bulk-actions" id="38a-bulk-actions">
+                        <span class="selected-count" id="38a-selected-count">0 selected</span>
+                        <button class="bulk-btn undo" onclick="undo38AEntries()">
+                            <i class="fas fa-undo"></i> Undo
+                        </button>
+                    </div>
+                `;
+            }
+            
+            let entriesHTML = entries.map(entry => {
+                return `
+                    <div class="entry-item">
+                        <input type="checkbox" class="entry-checkbox" 
+                               onchange="toggle38ASelection('${entry.EntryID}', this)"
+                               ${selected38AEntries.has(entry.EntryID) ? 'checked' : ''}>
+                        <div class="entry-content">
+                            <div class="entry-header">
+                                <div class="entry-vehicle">${entry.VehicleNumber}</div>
+                                <div class="entry-date">${formatDate(entry.Date)}</div>
+                            </div>
+                            <div class="entry-details">
+                                <div class="entry-detail">
+                                    <span class="detail-label">Approval From:</span>
+                                    <span class="detail-value">${entry.ApprovalFrom}</span>
+                                </div>
+                                <div class="entry-detail">
+                                    <span class="detail-label">Client:</span>
+                                    <span class="detail-value">${entry.Client}</span>
+                                </div>
+                            </div>
+                            ${entry.Remarks ? `<div class="entry-remarks">${entry.Remarks}</div>` : ''}
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = `
+                <div class="entries-header">
+                    <h3 class="entries-title">${title} (${entries.length})</h3>
+                    ${bulkActions}
+                </div>
+                <div class="entries-list">
+                    ${entriesHTML}
+                </div>
+                ${status === 'Pending' ? `
+                <div class="export-section">
+                    <h4 style="margin-bottom: 10px;">Export Data</h4>
+                    <div class="export-buttons">
+                        <button class="export-btn" onclick="export38AData('Pending')">
+                            <i class="fas fa-file-export"></i> Export Pending 38-A
+                        </button>
+                        <button class="export-btn" onclick="export38AData('Completed')">
+                            <i class="fas fa-file-export"></i> Export Completed 38-A
+                        </button>
+                    </div>
+                </div>
+                ` : ''}
+            `;
+            
+            update38ABulkActions();
+        }
+        
+        // Pending FF Functions
+        function loadPendingFFEntries() {
+            const container = document.getElementById('38a-entries-container');
+            
+            fetch(`${API_URL}?action=getPendingFFEntries`)
+                .then(response => response.json())
+                .then(data => {
+                    displayPendingFFEntries(data.entries || []);
+                })
+                .catch(error => {
+                    showNotification('Error loading Pending FF entries: ' + error.message, 'error');
+                    container.innerHTML = `<div class="no-entries"><p>Error loading entries</p></div>`;
+                });
+        }
+        
+        function displayPendingFFEntries(entries) {
+            const container = document.getElementById('38a-entries-container');
+            const title = 'Pending FF Entries';
+            
+            if (entries.length === 0) {
+                container.innerHTML = `
+                    <div class="entries-header">
+                        <h3 class="entries-title">${title}</h3>
+                    </div>
+                    <div class="no-entries">
+                        <i class="fas fa-forward"></i>
+                        <p>No pending FF entries found</p>
+                    </div>
+                `;
+                return;
+            }
+            
+            const bulkActions = `
+                <div class="bulk-actions" id="pending-ff-bulk-actions">
+                    <span class="selected-count" id="pending-ff-selected-count">0 selected</span>
+                    <button class="bulk-btn ff" onclick="approvePendingFFEntries()">
+                        <i class="fas fa-check"></i> Approve to Fitness
+                    </button>
+                </div>
+            `;
+            
+            let entriesHTML = entries.map(entry => {
+                return `
+                    <div class="entry-item">
+                        <input type="checkbox" class="entry-checkbox" 
+                               onchange="togglePendingFFSelection('${entry.EntryID}', this)"
+                               ${selectedPendingFFEntries.has(entry.EntryID) ? 'checked' : ''}>
+                        <div class="entry-content">
+                            <div class="entry-header">
+                                <div class="entry-vehicle">${entry.VehicleNumber}</div>
+                                <div class="entry-date">${formatDate(entry.CreatedAt)}</div>
+                            </div>
+                            <div class="entry-details">
+                                <div class="entry-detail">
+                                    <span class="detail-label">Status:</span>
+                                    <span class="detail-value">${entry.Status}</span>
+                                </div>
+                            </div>
+                            <div class="entry-remarks" style="color: var(--accent-yellow);">
+                                Ready to be sent to Fitness section
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+            
+            container.innerHTML = `
+                <div class="entries-header">
+                    <h3 class="entries-title">${title} (${entries.length})</h3>
+                    ${bulkActions}
+                </div>
+                <div class="entries-list">
+                    ${entriesHTML}
+                </div>
+                <div class="export-section">
+                    <h4 style="margin-bottom: 10px;">Export Data</h4>
+                    <div class="export-buttons">
+                        <button class="export-btn" onclick="exportPendingFFData()">
+                            <i class="fas fa-file-export"></i> Export Pending FF
+                        </button>
+                    </div>
+                </div>
+            `;
+            
+            updatePendingFFBulkActions();
+        }
+        
+        // Selection and Bulk Action Functions
+        function toggleFitnessSelection(entryId, checkbox) {
+            if (checkbox.checked) {
+                selectedFitnessEntries.add(entryId);
+            } else {
+                selectedFitnessEntries.delete(entryId);
+            }
+            updateFitnessBulkActions();
+        }
+        
+        function toggle38ASelection(entryId, checkbox) {
+            if (checkbox.checked) {
+                selected38AEntries.add(entryId);
+            } else {
+                selected38AEntries.delete(entryId);
+            }
+            update38ABulkActions();
+        }
+        
+        function togglePendingFFSelection(entryId, checkbox) {
+            if (checkbox.checked) {
+                selectedPendingFFEntries.add(entryId);
+            } else {
+                selectedPendingFFEntries.delete(entryId);
+            }
+            updatePendingFFBulkActions();
+        }
+        
+        function updateFitnessBulkActions() {
+            const count = selectedFitnessEntries.size;
+            const bulkActions = document.getElementById('fitness-bulk-actions');
+            const selectedCount = document.getElementById('fitness-selected-count');
+            
+            if (selectedCount) selectedCount.textContent = `${count} selected`;
+            
+            if (bulkActions) {
+                if (count > 0) {
+                    bulkActions.classList.add('show');
+                    
+                    // Show/hide edit button based on selection count
+                    const editBtn = bulkActions.querySelector('.bulk-btn.edit');
+                    if (editBtn) {
+                        editBtn.style.display = count === 1 ? 'flex' : 'none';
+                    }
+                } else {
+                    bulkActions.classList.remove('show');
+                }
+            }
+        }
+        
+        function update38ABulkActions() {
+            const count = selected38AEntries.size;
+            const bulkActions = document.getElementById('38a-bulk-actions');
+            const selectedCount = document.getElementById('38a-selected-count');
+            
+            if (selectedCount) selectedCount.textContent = `${count} selected`;
+            
+            if (bulkActions) {
+                if (count > 0) {
+                    bulkActions.classList.add('show');
+                    
+                    const editBtn = bulkActions.querySelector('.bulk-btn.edit');
+                    if (editBtn) {
+                        editBtn.style.display = count === 1 ? 'flex' : 'none';
+                    }
+                } else {
+                    bulkActions.classList.remove('show');
+                }
+            }
+        }
+        
+        function updatePendingFFBulkActions() {
+            const count = selectedPendingFFEntries.size;
+            const bulkActions = document.getElementById('pending-ff-bulk-actions');
+            const selectedCount = document.getElementById('pending-ff-selected-count');
+            
+            if (selectedCount) selectedCount.textContent = `${count} selected`;
+            
+            if (bulkActions) {
+                if (count > 0) {
+                    bulkActions.classList.add('show');
+                } else {
+                    bulkActions.classList.remove('show');
+                }
+            }
+        }
+        
+        // Form Submission Handlers
+        document.getElementById('fitness-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (isEditingFitness) {
+                updateFitnessEntry();
+            } else {
+                saveFitnessEntry();
+            }
+        });
+        
+        document.getElementById('38a-form').addEventListener('submit', function(e) {
+            e.preventDefault();
+            if (isEditing38A) {
+                update38AEntry();
+            } else {
+                save38AEntry();
+            }
+        });
+        
+        // Save/Update functions (similar to your previous app)
+        function saveFitnessEntry() {
+            const formData = new URLSearchParams();
+            formData.append('action', 'addFitnessEntry');
+            formData.append('date', document.getElementById('fitness-date').value);
+            formData.append('approvalFrom', document.getElementById('fitness-approval-from').value);
+            formData.append('client', document.getElementById('fitness-client').value);
+            formData.append('vehicleNumber', document.getElementById('fitness-vehicle').value);
+            formData.append('remarks', document.getElementById('fitness-remarks').value);
+            
+            const saveBtn = document.getElementById('fitness-save-btn');
+            const saveText = document.getElementById('fitness-save-text');
+            const loading = document.getElementById('fitness-loading');
+            
+            saveText.style.display = 'none';
+            loading.style.display = 'inline-block';
+            saveBtn.disabled = true;
+            
+            fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Fitness entry added successfully!', 'success');
+                    closeFitnessModal();
+                    loadFitnessEntries('Pending');
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('Error: ' + error.message, 'error');
+            })
+            .finally(() => {
+                saveText.style.display = 'inline-block';
+                loading.style.display = 'none';
+                saveBtn.disabled = false;
+            });
+        }
+        
+        function updateFitnessEntry() {
+            const formData = new URLSearchParams();
+            formData.append('action', 'updateFitnessEntry');
+            formData.append('entryId', document.getElementById('fitness-entry-id').value);
+            formData.append('date', document.getElementById('fitness-date').value);
+            formData.append('approvalFrom', document.getElementById('fitness-approval-from').value);
+            formData.append('client', document.getElementById('fitness-client').value);
+            formData.append('vehicleNumber', document.getElementById('fitness-vehicle').value);
+            formData.append('remarks', document.getElementById('fitness-remarks').value);
+            
+            const saveBtn = document.getElementById('fitness-save-btn');
+            const saveText = document.getElementById('fitness-save-text');
+            const loading = document.getElementById('fitness-loading');
+            
+            saveText.style.display = 'none';
+            loading.style.display = 'inline-block';
+            saveBtn.disabled = true;
+            
+            fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Fitness entry updated successfully!', 'success');
+                    closeFitnessModal();
+                    loadFitnessEntries(currentFitnessStatus);
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('Error: ' + error.message, 'error');
+            })
+            .finally(() => {
+                saveText.style.display = 'inline-block';
+                loading.style.display = 'none';
+                saveBtn.disabled = false;
+            });
+        }
+        
+        // Similar functions for 38-A would follow the same pattern
+        
+        // Bulk Action Implementations
+        function approveFitnessEntries() {
+            if (selectedFitnessEntries.size === 0) {
+                showNotification('No entries selected', 'warning');
+                return;
+            }
+            
+            if (confirm(`Approve ${selectedFitnessEntries.size} fitness entries?`)) {
+                const formData = new URLSearchParams();
+                formData.append('action', 'approveFitnessEntries');
+                formData.append('entryIds', JSON.stringify(Array.from(selectedFitnessEntries)));
+                
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        selectedFitnessEntries.clear();
+                        loadFitnessEntries('Pending');
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error: ' + error.message, 'error');
+                });
+            }
+        }
+        
+        function undoFitnessEntries() {
+            if (selectedFitnessEntries.size === 0) {
+                showNotification('No entries selected', 'warning');
+                return;
+            }
+            
+            if (confirm(`Move ${selectedFitnessEntries.size} entries back to pending?`)) {
+                const formData = new URLSearchParams();
+                formData.append('action', 'undoFitnessEntries');
+                formData.append('entryIds', JSON.stringify(Array.from(selectedFitnessEntries)));
+                
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        selectedFitnessEntries.clear();
+                        loadFitnessEntries('Completed');
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error: ' + error.message, 'error');
+                });
+            }
+        }
+        
+        function editSelectedFitnessEntry() {
+            if (selectedFitnessEntries.size !== 1) {
+                showNotification('Please select exactly one entry to edit', 'warning');
+                return;
+            }
+            
+            const entryId = Array.from(selectedFitnessEntries)[0];
+            
+            fetch(`${API_URL}?action=getFitnessEntries&status=${currentFitnessStatus}`)
+                .then(response => response.json())
+                .then(data => {
+                    const entry = data.entries.find(e => e.EntryID === entryId);
+                    if (entry) {
+                        openFitnessModal(entry);
+                    } else {
+                        showNotification('Entry not found', 'error');
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error loading entry: ' + error.message, 'error');
+                });
+        }
+        
+        function deleteFitnessEntries() {
+            if (selectedFitnessEntries.size === 0) {
+                showNotification('No entries selected', 'warning');
+                return;
+            }
+            
+            if (confirm(`Delete ${selectedFitnessEntries.size} fitness entries? They will be moved to bin.`)) {
+                const formData = new URLSearchParams();
+                formData.append('action', 'deleteFitnessEntries');
+                formData.append('entryIds', JSON.stringify(Array.from(selectedFitnessEntries)));
+                
+                fetch(API_URL, {
+                    method: 'POST',
+                    body: formData
+                })
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        showNotification(data.message, 'success');
+                        selectedFitnessEntries.clear();
+                        loadFitnessEntries(currentFitnessStatus);
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error: ' + error.message, 'error');
+                });
+            }
+        }
+        
+        // Similar functions for 38-A would follow...
+        
+        // Category Management
+        function loadFitnessCategories() {
+            // Load Fitness Approval From
+            fetch(`${API_URL}?action=getCategories&sheetName=FitnessApprovalFrom`)
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('fitness-approval-from');
+                    select.innerHTML = '<option value="">Select Approval From</option>';
+                    data.categories.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat.CategoryName;
+                        option.textContent = cat.CategoryName;
+                        select.appendChild(option);
+                    });
+                });
+            
+            // Load Fitness Client
+            fetch(`${API_URL}?action=getCategories&sheetName=FitnessClient`)
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('fitness-client');
+                    select.innerHTML = '<option value="">Select Client</option>';
+                    data.categories.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat.CategoryName;
+                        option.textContent = cat.CategoryName;
+                        select.appendChild(option);
+                    });
+                });
+        }
+        
+        function load38ACategories() {
+            // Load 38-A Approval From
+            fetch(`${API_URL}?action=getCategories&sheetName=38AApprovalFrom`)
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('38a-approval-from');
+                    select.innerHTML = '<option value="">Select Approval From</option>';
+                    data.categories.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat.CategoryName;
+                        option.textContent = cat.CategoryName;
+                        select.appendChild(option);
+                    });
+                });
+            
+            // Load 38-A Client
+            fetch(`${API_URL}?action=getCategories&sheetName=38AClient`)
+                .then(response => response.json())
+                .then(data => {
+                    const select = document.getElementById('38a-client');
+                    select.innerHTML = '<option value="">Select Client</option>';
+                    data.categories.forEach(cat => {
+                        const option = document.createElement('option');
+                        option.value = cat.CategoryName;
+                        option.textContent = cat.CategoryName;
+                        select.appendChild(option);
+                    });
+                });
+        }
+        
+        function addFitnessApproval() {
+            const input = document.getElementById('new-fitness-approval');
+            const name = input.value.trim();
+            
+            if (!name) {
+                showNotification('Please enter a category name', 'warning');
+                return;
+            }
+            
+            const formData = new URLSearchParams();
+            formData.append('action', 'addCategory');
+            formData.append('sheetName', 'FitnessApprovalFrom');
+            formData.append('name', name);
+            
+            fetch(API_URL, {
+                method: 'POST',
+                body: formData
+            })
+            .then(response => response.json())
+            .then(data => {
+                if (data.success) {
+                    showNotification('Category added successfully!', 'success');
+                    input.value = '';
+                    loadFitnessCategories();
+                } else {
+                    throw new Error(data.error);
+                }
+            })
+            .catch(error => {
+                showNotification('Error: ' + error.message, 'error');
+            });
+        }
+        
+        // Similar functions for other categories...
+        
+        // Export Functions
+        function exportFitnessData(status) {
+            fetch(`${API_URL}?action=exportFitnessData&status=${status}`)
+                .then(response => response.json())
+                .then(data => {
+                    if (data.success) {
+                        downloadCSV(data.csvData, data.fileName);
+                        showNotification('Data exported successfully!', 'success');
+                    } else {
+                        throw new Error(data.error);
+                    }
+                })
+                .catch(error => {
+                    showNotification('Error exporting data: ' + error.message, 'error');
+                });
+        }
+        
+        function downloadCSV(csvData, fileName) {
+            const blob = new Blob([csvData], { type: 'text/csv' });
+            const url = URL.createObjectURL(blob);
+            const a = document.createElement('a');
+            a.href = url;
+            a.download = fileName;
+            document.body.appendChild(a);
+            a.click();
+            document.body.removeChild(a);
+            URL.revokeObjectURL(url);
+        }
+        
+        // Utility Functions
+        function formatDate(dateString) {
+            if (!dateString) return 'Not set';
+            const date = new Date(dateString);
+            return date.toLocaleDateString('en-IN', {
+                day: '2-digit',
+                month: '2-digit',
+                year: 'numeric'
+            });
+        }
+        
+        function showNotification(message, type) {
+            const notification = document.getElementById('notification');
+            notification.textContent = message;
+            notification.className = `notification ${type}`;
+            notification.style.display = 'block';
+            
+            setTimeout(() => {
+                notification.style.display = 'none';
+            }, 4000);
+        }
+        
+        // Close modals when clicking outside
+        window.addEventListener('click', function(e) {
+            if (e.target === document.getElementById('fitness-modal')) {
+                closeFitnessModal();
+            }
+            if (e.target === document.getElementById('38a-modal')) {
+                close38AModal();
+            }
+        });
+    </script>
+</body>
+</html>
